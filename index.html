@@ -277,35 +277,43 @@
         }
 
         // --- 5. AI INTEGRATION (GEMINI API) ---
-        async function callGemini(message) {
-            if (!geminiApiKey) return "Error: Please set your Gemini API Key first by clicking the button in the top right of the chat.";
+     async function callGitHubAI(message) {
+            // Your API key variable will now hold your GitHub PAT instead
+            if (!geminiApiKey) return "Error: Please set your GitHub Token first by clicking the button in the top right.";
 
-            // The 'Spicy' Professor System Prompt
             const systemInstruction = `You are Prof. Lattice, an eccentric and highly enthusiastic university professor of materials science. 
             You absolutely love atomic packing, crystallography, and defect structures. 
-            You speak with passion, occasionally using slight dramatic flair when talking about things like close-packed planes.
-            The user is currently viewing a ${currentLattice.toUpperCase()} lattice in a 3D visualizer.
+            You speak with passion, occasionally using slight dramatic flair.
+            The user is currently viewing a ${currentLattice.toUpperCase()} lattice.
             Keep explanations concise but deeply informative. 
-            CRITICAL: You MUST format all mathematical formulas using LaTeX delimiters. Use $ for inline math (e.g., $a = 2R$) and $$ for block math.`;
+            CRITICAL: You MUST format all mathematical formulas using LaTeX delimiters. Use $ for inline math and $$ for block math.`;
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+            // GitHub Models API Endpoint
+            const url = `https://models.github.ai/inference/chat/completions`;
             
+            // GitHub Models uses the standard OpenAI payload structure
             const payload = {
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                contents: [{ parts: [{ text: message }] }]
+                model: "Llama-3.3-70B-Instruct", // You can change this to "gpt-4o", "Mistral-large", etc.
+                messages: [
+                    { role: "system", content: systemInstruction },
+                    { role: "user", content: message }
+                ]
             };
 
             try {
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${geminiApiKey}` // We pass the GitHub token here
+                    },
                     body: JSON.stringify(payload)
                 });
                 
                 const data = await response.json();
                 if (data.error) throw new Error(data.error.message);
                 
-                return data.candidates[0].content.parts[0].text;
+                return data.choices[0].message.content;
             } catch (error) {
                 console.error("API Error:", error);
                 return `*Sigh* The department's network must be down again. (Error: ${error.message})`;
@@ -325,7 +333,7 @@
             const loadingId = appendMessage('...', 'ai-msg');
             
             // Fetch AI response
-            const responseText = await callGemini(message);
+            const responseText = await callGitHubAI(message);
             
             // Update UI with response
             const msgEl = document.getElementById(loadingId);
